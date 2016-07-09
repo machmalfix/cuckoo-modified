@@ -806,6 +806,12 @@ def file(request, category, task_id, dlfile):
         "memdump" : ".dmp",
         "memdumpstrings" : ".dmp.strings",
     }
+    
+    if enabledconf["zipdownload"]:
+        zippassword = Config("reporting").zipdownload.password
+        deletezip = Config("reporting").zipdownload.deletezip
+
+
 
     if category == "sample":
         path = os.path.join(CUCKOO_ROOT, "storage", "binaries", dlfile)
