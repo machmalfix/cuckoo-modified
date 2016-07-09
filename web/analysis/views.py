@@ -817,7 +817,7 @@ def file(request, category, task_id, dlfile):
         path = os.path.join(CUCKOO_ROOT, "storage", "binaries", dlfile)
         #create zip file for download
         if enabledconf["zipdownload"]:
-            file_name = createEncZip(path, file_name, zippassword)
+            file_name = create_enc_zip(path, file_name, zippassword)
             path += ".zip"
             zipfile = True
         else:
@@ -900,7 +900,7 @@ def file(request, category, task_id, dlfile):
     
     return resp
 
-def createEncZip(path, file_name, password):
+def create_enc_zip(path, file_name, password):
     passparam = ''
     try:
         #set password if set in config
