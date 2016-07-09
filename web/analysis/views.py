@@ -14,6 +14,7 @@ import os
 import json
 import zipfile
 import tempfile
+import subprocess
 
 from django.conf import settings
 from wsgiref.util import FileWrapper
@@ -799,7 +800,8 @@ def report(request, task_id):
 def file(request, category, task_id, dlfile):
     file_name = dlfile
     cd = ""
-
+    zipfile = False
+    
     extmap = {
         "memdump" : ".dmp",
         "memdumpstrings" : ".dmp.strings",
@@ -807,7 +809,13 @@ def file(request, category, task_id, dlfile):
 
     if category == "sample":
         path = os.path.join(CUCKOO_ROOT, "storage", "binaries", dlfile)
-        file_name += ".bin"
+        #create zip file for download
+        if enabledconf["zipdownload"]:
+            file_name = createEncZip(path, file_name, zippassword)
+            path += ".zip"
+            zipfile = True
+        else:
+            file_name += ".bin"
     elif category == "pcap":
         file_name += ".pcap"
         # Forcefully grab dump.pcap, serve it as [sha256].pcap
@@ -862,6 +870,10 @@ def file(request, category, task_id, dlfile):
                                   {"error": "Category not defined"},
                                   context_instance=RequestContext(request))
 
+    #setting the content type in case of zip download
+    if enabledconf["zipdownload"] and zipfile:
+        cd = "application/zip"
+
     if not cd:
         cd = "application/octet-stream"
 
@@ -875,7 +887,28 @@ def file(request, category, task_id, dlfile):
 
     resp["Content-Length"] = os.path.getsize(path)
     resp["Content-Disposition"] = "attachment; filename=" + file_name
+    
+    #optionally deleting the zip after sending 
+    if enabledconf["zipdownload"] and deletezip and zipfile:
+        os.remove(path)
+    
     return resp
+
+def createEncZip(path, file_name, password):
+    passparam = ''
+    try:
+        #set password if set in config
+        if not password == '':
+            passparam = '-p' + password
+        rc = subprocess.call(['7z', 'a', passparam, '-y', path + ".zip", path])
+        if rc == 0:
+            file_name += ".zip"
+        #zip error return normal bin
+        return file_name
+    except:
+        return render_to_response("error.html",
+                                  {"error": "File not found"},
+                                  context_instance=RequestContext(request))
 
 @require_safe
 def procdump(request, task_id, process_id, start, end):
